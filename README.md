@@ -1,27 +1,56 @@
 # threads.js [![](https://travis-ci.org/gaia-components/threads.svg)](https://travis-ci.org/gaia-components/threads) [![devDependency Status](https://david-dm.org/gaia-components/threads/dev-status.svg)](https://david-dm.org/gaia-components/threads#info=devDependencies)
 
-Exposes services from one 'endpoint' to another.
+> Exposes a service between one browser JavaScript context to another.
 
-An 'endpoint' could be an:
+```js
+// my-worker.js
+service('my-service')
+  .method('greet', function(name) { return 'hello ' + name; })
+  .listen();
+```
 
-- `<iframe>`
-- `Worker`
-- `SharedWorker`
-- `BroadCastChannel`
+```js
+// app.js
+var endpoint = new Worker('my-worker.js');
+var myClient = client('my-service', endpoint);
+
+client.method('greet', 'john').then(function(value) {
+  console.log(value); //=> 'hello john'
+});
+```
+
+## Installation
+
+```bash
+$ npm install gaia-components/threads
+```
+```bash
+$ bower install gaia-components/threads
+```
 
 ## How it works
 
-Threads.js uses a variety of transport mechanisms to provide consistent, simple communication between almost any JavaScript context.
+Threads.js uses a variety of transport mechanisms to provide consistent, simple communication between almost any browser JavaScript context.
 
 During the connection phase we pass messages between different endpoints using various `.postMessage()` APIs. Once a Clients connection request is recieved by a Service, a direct `MessageChannel` is opened, through which all subsequent messages are passed.
+
+## Demos
+
+- Methods
+- Events
+- Forwarding messages
+- Custom Endpoints
+
+## Plugins
+
+- Streams
+- Contracts
 
 ## Service
 
 A `Service` is a collection of methods exposed to a `Client`. Methods can be sync or async (using `Promise`s).
 
 ```js
-importScripts('threads-service.js');
-
 service('my-service')
   .method('myMethod', function(param) {
     return 'hello: ' + param;
@@ -218,6 +247,7 @@ stream.cancel('because I want').then(onCancelSuccess, onCancelError);
 PS: The streaming implementation is very basic and doesn't handle
 *backpressure*, buffering and piping; it is just a simple event bridge between
 the `service` and the `client`. This was done on purpose to avoid complexity.
+
 The methods `close()`, `abort()` and `write()` return Promises that can be used
 to validate if action was executed (eg. `write` have no effect after `close` so
 promise will be rejected).

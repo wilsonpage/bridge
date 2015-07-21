@@ -1,0 +1,15 @@
+{
+  "source": {
+    "include": [
+      "lib-es5/client.js",
+      "lib-es5/service.js",
+      "lib-es5/message.js",
+      "lib-es5/utils/emitter.js"
+    ]
+  },
+  "templates": {
+    "default": {
+      "outputSourceFiles": false
+    }
+  }
+}

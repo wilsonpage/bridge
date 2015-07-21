@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: </title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link rel="stylesheet" href="http://code.cdn.mozilla.net/fonts/fira.css">
+    <link rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title"></h1>
+
+    
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+    <section>
+        <article><h1>threads.js <a href="https://travis-ci.org/gaia-components/threads"><img src="https://travis-ci.org/gaia-components/threads.svg" alt=""></a> <a href="https://david-dm.org/gaia-components/threads#info=devDependencies"><img src="https://david-dm.org/gaia-components/threads/dev-status.svg" alt="devDependency Status"></a></h1><blockquote>
+<p>Exposes a service between one browser JavaScript context to another.</p>
+</blockquote>
+<pre class="prettyprint source lang-js"><code>// my-worker.js
+service('my-service')
+  .method('greet', function(name) { return 'hello ' + name; })
+  .listen();</code></pre><pre class="prettyprint source lang-js"><code>// app.js
+var endpoint = new Worker('my-worker.js');
+var myClient = client('my-service', endpoint);
+
+client.method('greet', 'john').then(function(value) {
+  console.log(value); //=> 'hello john'
+});</code></pre><h2>Installation</h2><pre class="prettyprint source lang-bash"><code>$ npm install gaia-components/threads</code></pre><pre class="prettyprint source lang-bash"><code>$ bower install gaia-components/threads</code></pre><h2>How it works</h2><p>Threads.js uses a variety of transport mechanisms to provide consistent, simple communication between almost any browser JavaScript context.</p>
+<p>During the connection phase we pass messages between different endpoints using various <code>.postMessage()</code> APIs. Once a Clients connection request is recieved by a Service, a direct <code>MessageChannel</code> is opened, through which all subsequent messages are passed.</p>
+<h2>Demos</h2><ul>
+<li>Methods</li>
+<li>Events</li>
+<li>Forwarding messages</li>
+<li>Custom Endpoints</li>
+</ul>
+<h2>Plugins</h2><ul>
+<li>Streams</li>
+<li>Contracts</li>
+</ul>
+<h2>Service</h2><p>A <code>Service</code> is a collection of methods exposed to a <code>Client</code>. Methods can be sync or async (using <code>Promise</code>s).</p>
+<pre class="prettyprint source lang-js"><code>service('my-service')
+  .method('myMethod', function(param) {
+    return 'hello: ' + param;
+  })
+
+  .method('myOtherMethod', function() {
+    return new Promise(resolve => {
+      setTimeout(() => resolve('result'), 1000);
+    });
+  })
+
+  .listen();</code></pre><h2>Client</h2><p><code>Service</code>s are digested by <code>Client</code>s.</p>
+<pre class="prettyprint source lang-js"><code>var threads = require('threads-client');
+var endpoint = document.querySelector('iframe');
+var client = client('my-service', endpoint);
+
+client.method('myMethod', 'world').then(value => {
+  console.log(value); //=> 'hello: world'
+});</code></pre><h2>Events</h2><p>Events can be broadcast from a <code>Service</code>, these will trigger any subscribed callbacks on the client-side.</p>
+<pre class="prettyprint source lang-js"><code>var service = threads.service('my-service');
+var count = 0;
+
+setInterval(() => {
+  service.broadcast('tick', ++count);
+}, 1000);</code></pre><pre class="prettyprint source lang-js"><code>var client = threads.client('my-service');
+client.on('tick', count => console.log('tick', count));</code></pre><h4>Client#on(name, callback)</h4><p>Subscribe to a service broadcast. Callback will be passed <code>data</code> as the first argument.</p>
+<h4>Service#broadcast(name[, data, [clients]])</h4><p>Broadcast's an event from a <code>Service</code> to connected <code>Client</code>s. The third argument can be used to target selected clients by their <code>client.id</code>.</p>
+<h2>Endpoints</h2><p>The <code>Service</code> you wish your <code>Client</code> to connect to lives in a particular JavaScript context or 'endpoint'. thread.js has support follw the following endpoints out of the box:</p>
+<ul>
+<li><code>SharedWorker</code></li>
+<li><code>&lt;iframe&gt;</code></li>
+<li><code>Worker</code></li>
+<li><code>BroadCastChannel</code></li>
+</ul>
+<p>It's up to you to point your <code>Client</code> in the direction it's <code>Service</code> can be found. You can do this in two ways:</p>
+<ol>
+<li>Pass an endpoint to a client when it's constructed</li>
+</ol>
+<pre class="prettyprint source lang-js"><code>var endpoint = document.querySelector('iframe');
+client('my-service', endpoint);</code></pre><ol>
+<li>Define an endpoint 'globally'</li>
+</ol>
+<pre class="prettyprint source lang-js"><code>client.prototype.endpoint = document.querySelector('iframe');
+
+client('my-service-1');
+client('my-service-2');
+client('my-service-3');</code></pre><h3>Custom endpoints</h3><pre class="prettyprint source lang-js"><code>var customEndpoint = {
+  postMessage(data, transfer) { ... }
+  addListener(callback) { ... }
+  removeListener(callback) { ... }
+}
+
+client('my-service', customEndpoint);</code></pre><pre class="prettyprint source lang-js"><code>var customEndpoint = {
+  postMessage(data, transfer) { ... }
+  addListener(callback) { ... }
+  removeListener(callback) { ... }
+}
+
+service('my-service')
+  .method('myMethod', ...)
+  .listen(customEndpoint);</code></pre><h2>Forwarding messages</h2><p>A <code>Client</code> may not always have a direct handle on the endpoint which its service lives in
+. In this case you can <code>.forward()</code> messages from an accessbile endpoint until they reach their final destination.</p>
+<pre class="prettyprint source lang-js"><code>var worker = new Worker('real-service.js');
+
+service('*')
+  .on('message', message => {
+    message.forward(worker);
+  })
+  .listen();</code></pre><p>In most cases this hopping proceedure will only be required during the 'connect' phase. After which, all messages are sent directly via <code>MessageChannel</code>.</p>
+<h2>Optional Plugins</h2><p>To keep the core library as light as possible, threads.js uses a plugin approach to bolt on additional funcitonality.</p>
+<h3>Contracts</h3><p>Contracts can be used to enforce a strict, well-defined protocol between <code>Service</code> and <code>Client</code>. A <code>contract</code> object accepts two keys: <code>methods</code> and <code>events</code>. Each object defines an event/method name and the expected arguments.</p>
+<pre class="prettyprint source lang-js"><code>threads.service('my-service')
+  .plugin(contractsPlugin(myContract))
+  .method('myMethod', function(param) { return 'hello: ' + param; });</code></pre><h3>Streams</h3><p>Some services need to send data in <em>chunks</em> to the clients and also allow
+a way of canceling the action before it is completed. For these cases register
+the action as a <code>stream()</code>:</p>
+<pre class="prettyprint source lang-js"><code>threads.service('my-service')
+  .plugin(streamsService)
+  .stream('myStreamingMethod', function(stream, param) {
+    if (param === 'foo') {
+      stream.write('bar');
+    }
+
+    if (param === 'dolor') {
+      // abort() is the way to signal to client that action failed
+      stream.abort(new TypeError('invalid argument &quot;dolor&quot;'));
+      return;
+    }
+
+    var timeout = setTimeout(function() {
+      stream.write('baz');
+      // close() signals that action finished with success
+      stream.close();
+    }, 10);
+
+    // you should implement the `cancel` method on the `stream` if your service
+    // supports cancellation
+    stream.cancel = function(reason) {
+      clearTimeout(timeout);
+      // you can return a promise if cancel is async; or omit return if action
+      // is synchronous or you don't want to notify the client about completion
+    };
+  });</code></pre><pre class="prettyprint source lang-js"><code>var client = threads.client('my-service')
+  .plugin(streamsClient);
+
+var stream = client.stream('myStreamingMethod', 'foo');
+
+// called every time the service sends some data
+stream.listen(function(data) {
+  console.log('data:', data);
+});
+
+// &quot;closed&quot; is a Promise that will be fullfilled when stream is closed with
+// success or rejected when the service &quot;abort&quot; the operation
+stream.closed.then(onStreamClose, onStreamAbort);
+
+// important to note that not all services are able to handle cancellation
+// in those cases the promise will be rejected
+stream.cancel('because I want').then(onCancelSuccess, onCancelError);</code></pre><p>PS: The streaming implementation is very basic and doesn't handle
+<em>backpressure</em>, buffering and piping; it is just a simple event bridge between
+the <code>service</code> and the <code>client</code>. This was done on purpose to avoid complexity.</p>
+<p>The methods <code>close()</code>, <code>abort()</code> and <code>write()</code> return Promises that can be used
+to validate if action was executed (eg. <code>write</code> have no effect after <code>close</code> so
+promise will be rejected).</p></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">threads.js</a></h2><ul><li><a href="Client.html">Client</a></li><li><a href="Service.html">Service</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0-dev</a> on Tue Jul 21 2015 19:31:10 GMT+0100 (BST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

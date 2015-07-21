@@ -11,6 +11,7 @@ module.exports = {
 
 /**
  * Dependencies
+ * @ignore
  */
 
 var Emitter = require('./utils/emitter');
@@ -19,6 +20,7 @@ var message = require('./message');
 
 /**
  * Exports
+ * @ignore
  */
 
 module.exports = Client;
@@ -27,19 +29,50 @@ module.exports = Client;
  * Mini Logger
  *
  * @type {Function}
+ * @private
  */
-
 var debug = 0 ? function(arg1, ...args) {
   var type = `[${self.constructor.name}][${location.pathname}]`;
   console.log(`[Client]${type} - "${arg1}"`, ...args);
 } : () => {};
 
 /**
- * Initialize a new `Client`
+ * A Client is a remote interface to a Service.
  *
- * @param {String} type
+ * A Service can have many Clients.
+ *
+ * @example
+ * // iframe
+ * var iframe = document.querySelector('iframe');
+ * var myClient = client('my-service', iframe);
+ *
+ * @example
+ * // worker
+ * var worker = new Worker('my-worker.js');
+ * var myClient = client('my-service', worker);
+ *
+ * @example
+ * // shared-worker
+ * var sharedWorker = new SharedWorker('my-worker.js');
+ * sharedWorker.port.start();
+ * var myClient = client('my-service', sharedWorker.port);
+ *
+ * @example
+ * // broadcast-channel
+ * var bc = new BroadcastChannel('my-service-channel');
+ * var myClient = client('my-service', bc);
+ *
+ * @example
+ * // window
+ * var win = window.open('service-window.html');
+ * var myClient = client('my-service', win);
+ *
+ * @constructor
+ * @param {String} service The service name to connect to
+ * @param {(Iframe|Worker|SharedWorker|BroadcastChannel|Window)} endpoint
+ * The context/thread this service can be found in.
+ * @public
  */
-
 function Client(service, endpoint) {
   if (!(this instanceof Client)) return new Client(service, endpoint);
 
@@ -56,12 +89,10 @@ function Client(service, endpoint) {
   debug('initialized', service);
 }
 
-Client.prototype = Emitter({
+Client.prototype = {
 
   /**
    * Connect with the Service.
-   *
-   * @private
    */
   connect() {
     debug('connect');
@@ -104,7 +135,6 @@ Client.prototype = Emitter({
 
   /**
    * Disconnect from the `Service`
-   *
    * @public
    */
   disconnect(options) {
@@ -178,13 +208,8 @@ Client.prototype = Emitter({
 
   onBroadcast(message) {
     debug('on broadcast', message.data);
-    this.emit(message.data.type, message.data.data);
+    this._emit(message.data.type, message.data.data);
   },
-
-  // onServiceDestroyed() {
-  //   debug('service destroyed');
-  //   this.onDisconnected();
-  // },
 
   onDisconnected() {
     delete this.connected;
@@ -214,7 +239,17 @@ Client.prototype = Emitter({
 
   _on: Emitter.prototype.on,
   _off: Emitter.prototype.off,
-});
+  _emit: Emitter.prototype.emit
+};
+
+/**
+ * Bind to a Service event.
+ *
+ * @param  {String} name The event name
+ * @param  {Function} fn Callback function
+ * @return {Client} this
+ * @public
+ */
 
 Client.prototype.on = function(name, fn) {
   this.connect().then(() => {
@@ -232,6 +267,16 @@ Client.prototype.on = function(name, fn) {
   return this;
 };
 
+/**
+ * Unbind from a Service event.
+ *
+ * @this Client
+ * @param  {String} name The event name
+ * @param  {Function} fn Callback function
+ * @return {Client} this
+ * @public
+ */
+
 Client.prototype.off = function(name, fn) {
   this.connect().then(() => {
     Emitter.prototype.off.call(this, name, fn);
@@ -247,6 +292,14 @@ Client.prototype.off = function(name, fn) {
   return this;
 };
 
+/**
+ * Creates new `Error` from registery.
+ *
+ * @param  {Number} id Error Id
+ * @return {Error}
+ * @private
+ */
+
 function error(id) {
   return new Error({
     1: 'an endpoint must be defined'
@@ -258,6 +311,7 @@ function error(id) {
 
 /**
  * Dependencies
+ * @ignore
  */
 
 var Emitter = require('./utils/emitter');
@@ -265,6 +319,7 @@ var uuid = require('./utils/uuid');
 
 /**
  * Exports
+ * @ignore
  */
 
 exports = module.exports = type => new Message(type);
@@ -277,6 +332,7 @@ exports.Message = Message;
  * Mini Logger
  *
  * @type {Function}
+ * @private
  */
 
  var debug = 0 ? function(arg1, ...args) {
@@ -287,9 +343,13 @@ exports.Message = Message;
 /**
  * Initialize a new `Message`
  *
- * @param {String} type
+ * @private
+ * @class Message
+ * @borrows Emitter#on as #on
+ * @borrows Emitter#off as #off
+ * @borrows Emitter#emit as #emit
+ * @param {String} type Message type
  */
-
 function Message(type) {
   this.cancelled = false;
   this._timeout = null;
@@ -300,13 +360,7 @@ function Message(type) {
   else this.setupOutbound(type);
 }
 
-/**
- * Mixin `Emitter`
- *
- * @type {Object}
- */
-
-Message.prototype = Emitter({
+Message.prototype = {
   timeout: 1000,
 
   setupOutbound(type) {
@@ -484,7 +538,7 @@ Message.prototype = Emitter({
    * the response come back via an
    * alternative route.
    *
-   * @param  {HTMLIframeElement | MessagePort | Window} endpoint
+   * @param  {(HTMLIframeElement|MessagePort|Window)} endpoint
    * @public
    */
   forward(endpoint) {
@@ -510,14 +564,17 @@ Message.prototype = Emitter({
 
     this.emit('response', this.response);
   }
-});
+};
+
+Emitter(Message.prototype);
 
 /**
  * Initialize a new `Reciever`.
  *
+ * @private
+ * @class Receiver
  * @param {String} name - corresponds to `Message.recipient`
  */
-
 function Receiver(name) {
   this.name = name;
   this.endpoints = new Set();
@@ -527,13 +584,26 @@ function Receiver(name) {
   debug('receiver initialized', name);
 }
 
-/**
- * Mixin `Emitter`
- *
- * @type {Object}
- */
+Receiver.prototype = {
 
-Receiver.prototype = Emitter({
+  /**
+   * Begin listening for inbound messages.
+   *
+   * @example
+   *
+   * // When no arguments are given
+   * // messages will be listened for
+   * // on the default global scope
+   * .listen();
+   *
+   * // When an endpoint is out of reach
+   * // BroadcastChannel can be used.
+   * .listen(new BroadcastChannel('foo'));
+   *
+   * @param {(HTMLIframeElement|Worker|SharedWorker|
+   * BroadcastChannel|Window|Object)} [endpoint]
+   * @public
+   */
   listen(thing) {
     debug('listen');
     var endpoint = PortAdaptor.create(thing || self);
@@ -543,13 +613,26 @@ Receiver.prototype = Emitter({
     return this;
   },
 
-  unlisten(thing) {
-    debug('unlisten', thing);
+  /**
+   * Stop listening for inbound messages
+   * on all endpoints listened to prior.
+   *
+   * @param {(HTMLIframeElement|Worker|SharedWorker|
+   * BroadcastChannel|Window|Object)} [endpoint]
+   * @public
+   */
+  unlisten() {
+    debug('unlisten');
     this.endpoints.forEach(endpoint => {
       endpoint.removeListener(this.onMessage, this.unlisten);
     });
   },
 
+  /**
+   * Callback to handle inbound messages.
+   * @param  {MessageEvent} e
+   * @private
+   */
   onMessage(e) {
     if (!e.data.id) return;
     if (!e.data.type) return;
@@ -579,12 +662,14 @@ Receiver.prototype = Emitter({
     delete this.name;
     return this;
   }
-});
+};
+
+Emitter(Receiver.prototype);
 
 /**
  * Port Adaptors
+ * @private
  */
-
 function PortAdaptor(target) {
   debug('PortAdaptor');
   this.target = target;
@@ -704,8 +789,8 @@ PortAdaptor.create = function(target, options) {
 
 /**
  * Utils
+ * @private
  */
-
 function isEndpoint(thing) {
   return !!thing.addListener;
 }
@@ -773,24 +858,26 @@ function off(target, name, fn) { target.removeEventListener(name, fn); }
 
 /**
  * Dependencies
+ * @ignore
  */
 
 var uuid = require('./utils/uuid');
 var message = require('./message');
+var Receiver = message.Receiver;
 
 /**
  * Exports
+ * @ignore
  */
 
-module.exports = (name) => new Service(name);
-module.exports.Service = Service;
+module.exports = Service;
 
 /**
  * Mini Logger
  *
  * @type {Function}
+ * @private
  */
-
 var debug = 0 ? function(arg1, ...args) {
   var type = `[${self.constructor.name}][${location.pathname}]`;
   console.log(`[Service]${type} - "${arg1}"`, ...args);
@@ -798,11 +885,29 @@ var debug = 0 ? function(arg1, ...args) {
 
 /**
  * Extends `Receiver`
+ * @ignore
  */
 
-var proto = Service.prototype = Object.create(message.Receiver.prototype);
+Service.prototype = Object.create(Receiver.prototype);
 
+/**
+ * A `Service` is a collection of methods
+ * exposed to a `Client`. Methods can be
+ * sync or async (using Promises).
+ *
+ * @example
+ *
+ * service('my-service')
+ *   .method('ping', param => 'pong: ' + param)
+ *   .listen();
+ *
+ * @class Service
+ * @extends Receiver
+ * @param {String} name The service name
+ * @public
+ */
 function Service(name) {
+  if (!(this instanceof Service)) return new Service(name);
   message.Receiver.call(this, name); // call super
 
   this.clients = {};
@@ -820,12 +925,52 @@ function Service(name) {
   debug('initialized', name, self.createEvent);
 }
 
-proto.method = function(name, fn) {
+/**
+ * Define a method to expose to Clients.
+ * The return value of the result of a
+ * returned Promise will be sent back
+ * to the Client.
+ *
+ * @example
+ *
+ * service('my-service')
+ *
+ *  // sync return value
+ *  .method('myMethod', function(param) {
+ *    return 'hello: ' + param;
+ *  })
+ *
+ *  // or async Promise
+ *  .method('myOtherMethod', function() {
+ *    return new Promise(resolve => {
+ *      setTimeout(() => resolve('result'), 1000);
+ *    });
+ *  })
+ *
+ * @param  {String}   name
+ * @param  {Function} fn
+ * @return {Service} this for chaining
+ */
+Service.prototype.method = function(name, fn) {
   this.methods[name] = fn;
   return this;
 };
 
-proto.broadcast = function(type, data, only) {
+/**
+ * Broadcast an event to connected Clients.
+ *
+ * @example
+ *
+ * service.broadcast('my-event', { some: data }); // all clients
+ * service.broadcast('my-event', { some: data }, [ aClientId ]); // some clients
+ *
+ * @memberof Service
+ * @param  {String} type The message type/name
+ * @param  {*} data Data to send with the event
+ * @param  {Array} [only] A select list of clients to message
+ * @return {Service}
+ */
+Service.prototype.broadcast = function(type, data, only) {
   debug('broadcast', type, data, only, self.constructor.name);
   var msgData = {
     type: type,
@@ -843,13 +988,15 @@ proto.broadcast = function(type, data, only) {
       })
       .send(client.endpoint);
   });
+
+  return this;
 };
 
-proto.eachClient = function(fn) {
+Service.prototype.eachClient = function(fn) {
   for (var id in this.clients) fn(this.clients[id]);
 };
 
-proto.onConnect = function(message) {
+Service.prototype.onConnect = function(message) {
   debug('connection attempt', message.data, this.name);
   var data = message.data;
   var clientId = data.clientId;
@@ -883,7 +1030,7 @@ proto.onConnect = function(message) {
   debug('connected', clientId);
 };
 
-proto.onDisconnect = function(message) {
+Service.prototype.onDisconnect = function(message) {
   var client = this.clients[message.data];
   if (!client) return;
 
@@ -894,7 +1041,7 @@ proto.onDisconnect = function(message) {
   debug('disconnected', client.id);
 };
 
-proto.onMethod = function(message) {
+Service.prototype.onMethod = function(message) {
   debug('on method', message.data);
   this.emit('before onMethod', message);
   if (message.defaultPrevented) return;
@@ -907,28 +1054,34 @@ proto.onMethod = function(message) {
   message.respond(fn.apply(this, method.args));
 };
 
-proto.onOn = function(message) {
+Service.prototype.onOn = function(message) {
   debug('on on', message.data);
   this.emit('on', message.data);
 };
 
-proto.onOff = function(message) {
+Service.prototype.onOff = function(message) {
   debug('on off');
   this.emit('off', message.data);
 };
 
-proto.addClient = function(id, endpoint) {
+Service.prototype.addClient = function(id, endpoint) {
   this.clients[id] = {
     id: id,
     endpoint: endpoint
   };
 };
 
-proto.removeClient = function(id) {
+Service.prototype.removeClient = function(id) {
   delete this.clients[id];
 };
 
-proto.plugin = function(fn) {
+/**
+ * Use a plugin with this Service.
+ * @param  {Function} fn Plugin function
+ * @return {Service} this for chaining
+ * @public
+ */
+Service.prototype.plugin = function(fn) {
   fn(this, {
     message: message,
     uuid: uuid
@@ -937,7 +1090,12 @@ proto.plugin = function(fn) {
   return this;
 };
 
-proto.disconnect = function(client) {
+/**
+ * Disconnect a Client from the Service.
+ * @param  {Object} client
+ * @private
+ */
+Service.prototype.disconnect = function(client) {
   this.removeClient(client.id);
   message('disconnect')
     .set({
@@ -947,24 +1105,24 @@ proto.disconnect = function(client) {
     .send(client.endpoint);
 };
 
-proto.destroy = function() {
+/**
+ * Destroy the Service.
+ * @public
+ */
+Service.prototype.destroy = function() {
   this.broadcast('service:destroyed');
   delete this.clients;
   this.unlisten();
   this.off();
 };
 
-// new Service('scope').listen()
-//   .method('close', function() {
-//     debug('closing');
-//     self.dispatchEvent(new MessageEvent('closing'));
-//     setTimeout(() => self.close());
-//   });
-
 /**
- * Utils
+ * Creates new `Error` from registery.
+ *
+ * @param  {Number} id Error Id
+ * @return {Error}
+ * @private
  */
-
 function error(id) {
   var args = [].slice.call(arguments, 1);
   return new Error({
@@ -977,6 +1135,7 @@ function error(id) {
 
 /**
  * Exports
+ * @ignore
  */
 
 module.exports = Emitter;
@@ -985,6 +1144,7 @@ module.exports = Emitter;
  * Simple logger
  *
  * @type {Function}
+ * @private
  */
 
 var debug = 0 ? console.log.bind(console, '[Emitter]') : () => {};
@@ -992,7 +1152,8 @@ var debug = 0 ? console.log.bind(console, '[Emitter]') : () => {};
 /**
  * Create new `Emitter`
  *
- * @constructor
+ * @class Emitter
+ * @private
  */
 
 function Emitter(host) {
@@ -1021,11 +1182,11 @@ Emitter.prototype = {
   /**
    * Remove an event listener.
    *
-   * Example:
+   * @example
    *
-   *   emitter.off('name', fn); // remove one callback
-   *   emitter.off('name'); // remove all callbacks for 'name'
-   *   emitter.off(); // remove all callbacks
+   * emitter.off('name', fn); // remove one callback
+   * emitter.off('name'); // remove all callbacks for 'name'
+   * emitter.off(); // remove all callbacks
    *
    * @param  {String} type (optional)
    * @param  {Function} callback (optional)
@@ -1051,9 +1212,9 @@ Emitter.prototype = {
   /**
    * Emit an event.
    *
-   * Example:
+   * @example
    *
-   *   emitter.emit('name', { some: 'data' });
+   * emitter.emit('name', { some: 'data' });
    *
    * @param  {String} type
    * @param  {*} data
