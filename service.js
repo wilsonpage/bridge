@@ -137,13 +137,21 @@ exports.Message = Message;
 /**
  * Mini Logger
  *
+ * 0: off
+ * 1: performance
+ * 2: console.log
+ *
  * @type {Function}
  * @private
  */
-var debug = 0 ? function(arg1, ...args) {
-  var type = `[${self.constructor.name}][${location.pathname}]`;
-  console.log(`[Message]${type} - "${arg1}"`, ...args);
-} : () => {};
+var debug = {
+  0: () => {},
+  1: arg => performance.mark(`[${self.constructor.name}][Message] - ${arg}`),
+  2: (arg1, ...args) => {
+    var type = `[${self.constructor.name}][${location.pathname}]`;
+    console.log(`[Message]${type} - "${arg1}"`, ...args);
+  }
+}[1];
 
 /**
  * Default response timeout.
@@ -825,7 +833,7 @@ module.exports = Service;
  */
 var debug = {
   0: () => {},
-  1: arg => performance.mark(`[Service] - ${arg}`),
+  1: arg => performance.mark(`[${self.constructor.name}][Service] - ${arg}`),
   2: (arg1, ...args) => {
     var type = `[${self.constructor.name}][${location.pathname}]`;
     console.log(`[Service]${type} - "${arg1}"`, ...args);

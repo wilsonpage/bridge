@@ -29,7 +29,7 @@ module.exports = Client;
  */
 var debug = {
   0: () => {},
-  1: arg => performance.mark(`[Client] - ${arg}`),
+  1: arg => performance.mark(`[${self.constructor.name}][Client] - ${arg}`),
   2: (arg1, ...args) => {
     var type = `[${self.constructor.name}][${location.pathname}]`;
     console.log(`[Client]${type} - "${arg1}"`, ...args);

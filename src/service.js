@@ -28,7 +28,7 @@ module.exports = Service;
  */
 var debug = {
   0: () => {},
-  1: arg => performance.mark(`[Service] - ${arg}`),
+  1: arg => performance.mark(`[${self.constructor.name}][Service] - ${arg}`),
   2: (arg1, ...args) => {
     var type = `[${self.constructor.name}][${location.pathname}]`;
     console.log(`[Service]${type} - "${arg1}"`, ...args);

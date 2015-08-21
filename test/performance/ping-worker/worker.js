@@ -1,9 +1,15 @@
 /*global bridge,performance*/
 
-var perfMark = performance.mark;
-performance.mark = arg => perfMark.call(performance, `${arg}@ping-worker.gaiamobile.org`);
-var mark = arg => performance.mark(`[App] ${arg}`);
+// Overwrite to prevent key clashes
+performance.mark = (function(mark, hash) {
+  return key => {
+    var count = hash[key] = (hash[key] && hash[key] + 1) || 1;
+    if (count > 1) key += ` (${count})`;
+    mark.call(performance, key + '@ping-worker.gaiamobile.org');
+  };
+})(performance.mark, {});
 
+var mark = arg => performance.mark(`[App] ${arg}`);
 mark('service script start');
 
 importScripts('bridge.js');
