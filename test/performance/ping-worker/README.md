@@ -86,13 +86,13 @@ raptor test coldlaunch --runs 20 --app ping-worker
 
 ### Device
 
-Build ID               20150804150207
-Gaia Revision          dddca9ffc5dfad2f074099b3ca27f5ba353a3f2b
-Gaia Date              2015-08-19 15:04:17
-Gecko Revision         https://hg.mozilla.org/mozilla-central/rev/f3b757156f69
-Gecko Version          42.0a1
-Device Name            flame
-Firmware(Release)      4.4.2
-Firmware(Incremental)  eng.cltbld.20150720.044158
-Firmware Date          Mon Jul 20 04:42:10 EDT 2015
-Bootloader             L1TC000118D0
+- Build ID               20150804150207
+- Gaia Revision          dddca9ffc5dfad2f074099b3ca27f5ba353a3f2b
+- Gaia Date              2015-08-19 15:04:17
+- Gecko Revision         https://hg.mozilla.org/mozilla-central/rev/f3b757156f69
+- Gecko Version          42.0a1
+- Device Name            flame
+- Firmware(Release)      4.4.2
+- Firmware(Incremental)  eng.cltbld.20150720.044158
+- Firmware Date          Mon Jul 20 04:42:10 EDT 2015
+- Bootloader             L1TC000118D0
