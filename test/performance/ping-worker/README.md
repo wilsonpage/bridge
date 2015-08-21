@@ -1,14 +1,14 @@
-### Total (mean)
+## Total (mean)
 
 #### `309.45ms`
 
-### Slow bits
+## Slow bits
 
 1. Waiting for Worker - `~90ms`
 2. 'connected' `.postMessage()` (`MessageChannel`) Worker -> Window - `~60ms`
 3. Worker `importScripts()` - `~40ms`
 
-### Full log
+## Full log
 
 ```bash
 raptor test coldlaunch --runs 20 --app ping-worker
@@ -83,3 +83,16 @@ raptor test coldlaunch --runs 20 --app ping-worker
 | coldlaunch.uss                                                             | 9.610   | 9.600   | 9.600   | 9.700   | 0.030  | 9.700   |
 | coldlaunch.rss                                                             | 26.520  | 26.500  | 26.500  | 26.800  | 0.068  | 26.700  |
 | coldlaunch.[DedicatedWorkerGlobalScope][Message] - responded with: (2)     | 586.313 | 586.000 | 531.000 | 646.000 | 25.738 | 636.700 |13.250  |
+
+### Device
+
+Build ID               20150804150207
+Gaia Revision          dddca9ffc5dfad2f074099b3ca27f5ba353a3f2b
+Gaia Date              2015-08-19 15:04:17
+Gecko Revision         https://hg.mozilla.org/mozilla-central/rev/f3b757156f69
+Gecko Version          42.0a1
+Device Name            flame
+Firmware(Release)      4.4.2
+Firmware(Incremental)  eng.cltbld.20150720.044158
+Firmware Date          Mon Jul 20 04:42:10 EDT 2015
+Bootloader             L1TC000118D0

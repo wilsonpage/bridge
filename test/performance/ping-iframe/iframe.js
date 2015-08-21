@@ -1,6 +1,6 @@
 /*global bridge*/
 
-window.performance.mark = arg => window.parent.performance.mark(arg);
+performance.mark = arg => window.parent.performance.mark(arg);
 var mark = arg => performance.mark(`[App] ${arg}`);
 mark('service script start');
 
